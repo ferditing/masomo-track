@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
@@ -35,3 +36,70 @@ def student_register(request):
     else:
         form = StudentRegistrationForm()
     return render(request, 'portal/student_register.html', {'form': form})
+
+
+from django.shortcuts import render
+from .decorators import parent_required, teacher_required, headteacher_required, class_teacher_required
+
+# Parent Dashboard
+@login_required
+@parent_required
+def parent_dashboard(request):
+    context = {
+        'message': "Welcome, Parent! Here you can monitor your child's academic progress and financial status."
+    }
+    return render(request, 'portal/parent_dashboard.html', context)
+
+# Existing teacher dashboards...
+@login_required
+@teacher_required
+def teacher_dashboard(request):
+    context = {
+        'message': "Welcome, Subject Teacher! Here you can manage your subjects and assignments."
+    }
+    return render(request, 'portal/teacher_dashboard.html', context)
+
+@login_required
+@headteacher_required
+def headteacher_dashboard(request):
+    context = {
+        'message': "Welcome, Headteacher! You have full access to all school data."
+    }
+    return render(request, 'portal/headteacher_dashboard.html', context)
+
+@login_required
+@class_teacher_required
+def class_teacher_dashboard(request):
+    context = {
+        'message': "Welcome, Class Teacher! Here you can view your class details and assigned subjects."
+    }
+    return render(request, 'portal/class_teacher_dashboard.html', context)
+
+@login_required
+def student_dashboard(request):
+    context = {
+        'message': "Welcome, Student! Here you can view your assignments, academic progress, and more."
+    }
+    return render(request, 'portal/student_dashboard.html', context)
+
+@login_required
+def dashboard_redirect(request):
+    user = request.user
+    # Check for a student profile first
+    if hasattr(user, 'student_profile'):
+        return redirect('student_dashboard')  # Create this dashboard if needed.
+    # Then check if the user is a parent
+    elif hasattr(user, 'parent_profile'):
+        return redirect('parent_dashboard')
+    # Then check if the user is a teacher
+    elif hasattr(user, 'teacher_profile'):
+        teacher = user.teacher_profile
+        if teacher.is_headteacher:
+            return redirect('headteacher_dashboard')
+        elif teacher.is_class_teacher:
+            return redirect('class_teacher_dashboard')
+        else:
+            return redirect('teacher_dashboard')
+    # Default to home if no profile is found
+    else:
+        return redirect('home')
