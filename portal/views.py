@@ -1,10 +1,11 @@
 from django.shortcuts import render
+from .models import Student, Parent
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth import login
-from .forms import StudentRegistrationForm
+from .forms import StudentRegistrationForm, ParentRegistrationForm
 
 
 def home(request):
@@ -17,7 +18,7 @@ def student_register(request):
         if form.is_valid():
             # Create a new User
             user = User.objects.create_user(
-                username=form.cleaned_data['email'],  # using email as username
+                username=form.cleaned_data['email'],
                 email=form.cleaned_data['email'],
                 first_name=form.cleaned_data['first_name'],
                 last_name=form.cleaned_data['last_name'],
@@ -27,37 +28,81 @@ def student_register(request):
             student = form.save(commit=False)
             student.user = user
             student.save()
-            # Save many-to-many fields (e.g., subjects)
             form.save_m2m()
             
-            # Optionally, log the user in immediately
+            # Link the student to a parent if a Parent ID was provided
+            parent_id = form.cleaned_data.get('parent_identifier')
+            if parent_id:
+                try:
+                    parent = Parent.objects.get(identifier=parent_id)
+                    student.parents.add(parent)
+                except Parent.DoesNotExist:
+                    # Optionally, you can add an error or log a message here
+                    pass
+
+            # Optionally, log in the new user immediately
             login(request, user)
-            return redirect('home')  # Redirect to a homepage or student dashboard
+            return redirect('dashboard_redirect')
     else:
         form = StudentRegistrationForm()
     return render(request, 'portal/student_register.html', {'form': form})
 
-
 from django.shortcuts import render
 from .decorators import parent_required, teacher_required, headteacher_required, class_teacher_required
 
+
+def parent_register(request):
+    if request.method == 'POST':
+        form = ParentRegistrationForm(request.POST)
+        if form.is_valid():
+            # Create a new User for the parent
+            user = User.objects.create_user(
+                username=form.cleaned_data['email'] if form.cleaned_data.get('email') else form.cleaned_data['identifier'],
+                email=form.cleaned_data.get('email', ''),
+                first_name=form.cleaned_data['first_name'],
+                last_name=form.cleaned_data['last_name'],
+                password=form.cleaned_data['password']
+            )
+            # Create the Parent profile with the provided identifier
+            parent = form.save(commit=False)
+            parent.user = user
+            parent.save()
+            
+            # Log the user in and redirect (or show the linked children if any)
+            login(request, user)
+            return redirect('dashboard_redirect')
+    else:
+        form = ParentRegistrationForm()
+    return render(request, 'portal/parent_register.html', {'form': form})
 # Parent Dashboard
 @login_required
 @parent_required
 def parent_dashboard(request):
+    parent = request.user.parent_profile
+    children = parent.children.all()  # Using the ManyToMany relation from Student
     context = {
-        'message': "Welcome, Parent! Here you can monitor your child's academic progress and financial status."
+        'children': children,
     }
     return render(request, 'portal/parent_dashboard.html', context)
+    
 
 # Existing teacher dashboards...
 @login_required
 @teacher_required
 def teacher_dashboard(request):
+    teacher = request.user.teacher_profile
+    # Gather assignments for subjects this teacher is responsible for.
+    assignments = []
+    for subject in teacher.subjects.all():
+        assignments.extend(subject.assignments.all())
+    # Optionally, sort assignments by due date
+    assignments.sort(key=lambda a: a.due_date)
+    
     context = {
-        'message': "Welcome, Subject Teacher! Here you can manage your subjects and assignments."
+        'assignments': assignments,
     }
     return render(request, 'portal/teacher_dashboard.html', context)
+    
 
 @login_required
 @headteacher_required
@@ -77,8 +122,20 @@ def class_teacher_dashboard(request):
 
 @login_required
 def student_dashboard(request):
+    if not hasattr(request.user, 'student_profile'):
+        return redirect('home')
+    student = request.user.student_profile
+    # Get assignments from the subjects the student is enrolled in
+    assignments = []
+    for subject in student.subjects.all():
+        assignments.extend(subject.assignments.all())
+    assignments.sort(key=lambda a: a.due_date)
+    
+    results = student.results.all()
+    
     context = {
-        'message': "Welcome, Student! Here you can view your assignments, academic progress, and more."
+        'assignments': assignments,
+        'results': results,
     }
     return render(request, 'portal/student_dashboard.html', context)
 

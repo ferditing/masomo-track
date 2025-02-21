@@ -6,7 +6,29 @@
 </head>
 <body>
     <h1>Parent Dashboard</h1>
-    <p>{{ message }}</p>
-    <!-- Additional parent functionality can be added here -->
+    {% if children %}
+        {% for child in children %}
+            <h2>{{ child.user.get_full_name }} (Admission: {{ child.admission_number }})</h2>
+            <h3>Academic Progress:</h3>
+            <ul>
+                {% for result in child.results.all %}
+                    <li>{{ result.subject.name }}: {{ result.score }} ({{ result.date_recorded }})</li>
+                {% empty %}
+                    <li>No results available.</li>
+                {% endfor %}
+            </ul>
+            <h3>Financial Records:</h3>
+            <ul>
+                {% for record in child.financial_records.all %}
+                    <li>{{ record.payment_date }}: KES {{ record.amount_paid }} - {{ record.description }}</li>
+                {% empty %}
+                    <li>No financial records available.</li>
+                {% endfor %}
+            </ul>
+            <hr>
+        {% endfor %}
+    {% else %}
+        <p>No children assigned to your profile.</p>
+    {% endif %}
 </body>
 </html>

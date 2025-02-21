@@ -2,11 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Teacher Dashboard</title>
+    <title>Teacher Dashboard - Masomo-Track</title>
 </head>
 <body>
     <h1>Teacher Dashboard</h1>
-    <p>{{ message }}</p>
-    <!-- Additional subject teacher functionality goes here -->
+    {% if assignments %}
+        <ul>
+            {% for assignment in assignments %}
+                <li>
+                    <strong>{{ assignment.title }}</strong> for <em>{{ assignment.subject.name }}</em><br>
+                    Due: {{ assignment.due_date }}<br>
+                    {{ assignment.description }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No assignments found for your subjects.</p>
+    {% endif %}
 </body>
 </html>

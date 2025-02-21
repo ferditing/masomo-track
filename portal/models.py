@@ -64,9 +64,10 @@ class Teacher(models.Model):
 # Profile for parents
 class Parent(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent_profile')
-
+    identifier = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    
     def __str__(self):
-        return self.user.get_full_name()
+        return f"{self.user.get_full_name()} (ID: {self.identifier})"
 
 # Model for assignments posted by subject teachers
 class Assignment(models.Model):
