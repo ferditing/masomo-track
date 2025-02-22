@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Assignment - Masomo-Track</title>
+</head>
+<body>
+    <h1>Create Assignment</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Create Assignment</button>
+    </form>
+    <p><a href="{% url 'teacher_dashboard' %}">Back to Dashboard</a></p>
+</body>
+</html>

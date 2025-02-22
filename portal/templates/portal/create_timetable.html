@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Timetable Entry - Masomo-Track</title>
+</head>
+<body>
+    <h1>Create Timetable Entry</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Create Entry</button>
+    </form>
+    <p><a href="{% url 'headteacher_dashboard' %}">Back to Headteacher Dashboard</a></p>
+</body>
+</html>

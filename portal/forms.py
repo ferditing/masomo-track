@@ -2,7 +2,7 @@
 
 from django import forms
 from django.contrib.auth.models import User
-from .models import Student, Parent, ClassRoom, Subject
+from .models import Student, Parent, ClassRoom, Subject, Teacher, Timetable, FinancialRecord
 
 class StudentRegistrationForm(forms.ModelForm):
     first_name = forms.CharField(max_length=30, required=True)
@@ -54,3 +54,59 @@ class ParentRegistrationForm(forms.ModelForm):
         if password and password_confirm and password != password_confirm:
             self.add_error("password_confirm", "Passwords do not match.")
         return cleaned_data
+    
+from .models import Assignment, Result
+
+class AssignmentForm(forms.ModelForm):
+    class Meta:
+        model = Assignment
+        fields = ['subject', 'title', 'description', 'due_date', 'assignment_type', 'file_upload']
+
+class ResultForm(forms.ModelForm):
+    class Meta:
+        model = Result
+        fields = ['student', 'subject', 'assignment', 'score']
+
+
+class TeacherRegistrationForm(forms.ModelForm):
+    first_name = forms.CharField(max_length=30, required=True)
+    last_name = forms.CharField(max_length=30, required=True)
+    email = forms.EmailField(required=True)
+    teacher_id = forms.CharField(max_length=20, required=True)
+    password = forms.CharField(widget=forms.PasswordInput)
+    password_confirm = forms.CharField(widget=forms.PasswordInput, label="Confirm Password")
+    subjects = forms.ModelMultipleChoiceField(
+        queryset=Subject.objects.all(),
+        required=True,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Select up to 2 subjects."
+    )
+    
+    class Meta:
+        model = Teacher
+        fields = ['teacher_id', 'subjects']
+    
+    def clean_subjects(self):
+        subjects = self.cleaned_data.get('subjects')
+        if subjects and subjects.count() > 2:
+            raise forms.ValidationError("You can select a maximum of 2 subjects.")
+        return subjects
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        password_confirm = cleaned_data.get("password_confirm")
+        if password and password_confirm and password != password_confirm:
+            self.add_error("password_confirm", "Passwords do not match.")
+        return cleaned_data
+    
+class TimetableForm(forms.ModelForm):
+    class Meta:
+        model = Timetable
+        fields = ['classroom', 'subject', 'teacher', 'day_of_week', 'period']
+
+class FinancialRecordUpdateForm(forms.ModelForm):
+    class Meta:
+        model = FinancialRecord
+        fields = ['fee_status', 'amount_paid']
+

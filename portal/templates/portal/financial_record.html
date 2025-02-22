@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Financial Record - Masomo-Track</title>
+</head>
+<body>
+    <h1>Update Financial Record for {{ record.student.user.get_full_name }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Update Record</button>
+    </form>
+    <p><a href="{% url 'finance_dashboard' %}">Back to Finance Dashboard</a></p>
+</body>
+</html>

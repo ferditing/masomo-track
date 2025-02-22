@@ -1,11 +1,11 @@
 from django.shortcuts import render
-from .models import Student, Parent
+from .models import Student, Parent, FinancialRecord
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth import login
-from .forms import StudentRegistrationForm, ParentRegistrationForm
+from .forms import StudentRegistrationForm, ParentRegistrationForm, AssignmentForm, ResultForm
 
 
 def home(request):
@@ -160,3 +160,94 @@ def dashboard_redirect(request):
     # Default to home if no profile is found
     else:
         return redirect('home')
+    
+@login_required
+@teacher_required
+def create_assignment(request):
+    if request.method == 'POST':
+        form = AssignmentForm(request.POST, request.FILES)  # Note request.FILES for file uploads
+        if form.is_valid():
+            form.save()
+            return redirect('teacher_dashboard')
+    else:
+        form = AssignmentForm()
+    return render(request, 'portal/create_assignment.html', {'form': form})
+
+@login_required
+@teacher_required
+def post_result(request):
+    if request.method == 'POST':
+        form = ResultForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('teacher_dashboard')
+    else:
+        form = ResultForm()
+    return render(request, 'portal/post_result.html', {'form': form})
+
+from .forms import TeacherRegistrationForm
+
+def teacher_register(request):
+    if request.method == 'POST':
+        form = TeacherRegistrationForm(request.POST)
+        if form.is_valid():
+            # Create a new User for the teacher
+            user = User.objects.create_user(
+                username=form.cleaned_data['email'],  # using email as username
+                email=form.cleaned_data['email'],
+                first_name=form.cleaned_data['first_name'],
+                last_name=form.cleaned_data['last_name'],
+                password=form.cleaned_data['password']
+            )
+            # Create the Teacher profile
+            teacher = form.save(commit=False)
+            teacher.user = user
+            teacher.save()
+            form.save_m2m()
+            login(request, user)
+            return redirect('dashboard_redirect')
+    else:
+        form = TeacherRegistrationForm()
+    return render(request, 'portal/teacher_register.html', {'form': form})
+
+from .forms import TimetableForm
+
+@login_required
+@headteacher_required
+def create_timetable(request):
+    if request.method == 'POST':
+        form = TimetableForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('headteacher_dashboard')
+    else:
+        form = TimetableForm()
+    return render(request, 'portal/create_timetable.html', {'form': form})
+
+from .forms import FinancialRecordUpdateForm
+@login_required
+def update_financial_record(request, record_id):
+    try:
+        record = FinancialRecord.objects.get(id=record_id)
+    except FinancialRecord.DoesNotExist:
+        return redirect('finance_dashboard')  # or some error page
+
+    if request.method == 'POST':
+        form = FinancialRecordUpdateForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()
+            return redirect('finance_dashboard')
+    else:
+        form = FinancialRecordUpdateForm(instance=record)
+    return render(request, 'portal/financial_record.html', {'form': form, 'record': record})
+
+from .models import FinancialRecord
+
+@login_required
+def finance_dashboard(request):
+    # Retrieve all financial records, ordered by the latest payment date
+    records = FinancialRecord.objects.all().order_by('-payment_date')
+    context = {
+        'records': records,
+    }
+    return render(request, 'portal/finance_dashboard.html', context)
