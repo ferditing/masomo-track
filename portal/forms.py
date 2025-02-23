@@ -60,7 +60,7 @@ from .models import Assignment, Result
 class AssignmentForm(forms.ModelForm):
     class Meta:
         model = Assignment
-        fields = ['subject', 'title', 'description', 'due_date', 'assignment_type', 'file_upload']
+        fields = ['classroom','subject', 'title', 'description', 'due_date', 'assignment_type', 'file_upload']
 
 class ResultForm(forms.ModelForm):
     class Meta:
@@ -110,3 +110,13 @@ class FinancialRecordUpdateForm(forms.ModelForm):
         model = FinancialRecord
         fields = ['fee_status', 'amount_paid']
 
+
+from .models import Answer
+
+class AnswerForm(forms.ModelForm):
+    class Meta:
+        model = Answer
+        fields = ['answer_text', 'file_upload']
+        widgets = {
+            'answer_text': forms.Textarea(attrs={'rows': 4, 'cols': 40}),
+        }

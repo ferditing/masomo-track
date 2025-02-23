@@ -1,8 +1,7 @@
-from django.shortcuts import render
-from .models import Student, Parent, FinancialRecord
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Student, Parent, FinancialRecord, ClassRoom
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth import login
 from .forms import StudentRegistrationForm, ParentRegistrationForm, AssignmentForm, ResultForm
@@ -91,19 +90,18 @@ def parent_dashboard(request):
 @teacher_required
 def teacher_dashboard(request):
     teacher = request.user.teacher_profile
-    # Gather assignments for subjects this teacher is responsible for.
-    assignments = []
-    for subject in teacher.subjects.all():
-        assignments.extend(subject.assignments.all())
-    # Optionally, sort assignments by due date
-    assignments.sort(key=lambda a: a.due_date)
-    
+    if teacher.is_class_teacher:
+        # Retrieve the classroom where this teacher is assigned as the class teacher.
+        class_room = ClassRoom.objects.filter(class_teacher=teacher).first()
+        assignments = class_room.assignments.all().order_by('-posted_date') if class_room else []
+    else:
+        assignments = teacher.created_assignments.all().order_by('-posted_date')
     context = {
         'assignments': assignments,
     }
     return render(request, 'portal/teacher_dashboard.html', context)
     
-
+#head teacher dashboard
 @login_required
 @headteacher_required
 def headteacher_dashboard(request):
@@ -120,24 +118,28 @@ def class_teacher_dashboard(request):
     }
     return render(request, 'portal/class_teacher_dashboard.html', context)
 
+# portal/views.py
+
 @login_required
 def student_dashboard(request):
     if not hasattr(request.user, 'student_profile'):
         return redirect('home')
     student = request.user.student_profile
-    # Get assignments from the subjects the student is enrolled in
     assignments = []
     for subject in student.subjects.all():
         assignments.extend(subject.assignments.all())
     assignments.sort(key=lambda a: a.due_date)
     
-    results = student.results.all()
+    # Optionally, fetch answers to display submission status
+    answers = student.answers.all()
+    answers_dict = { ans.assignment.id: ans for ans in answers }
     
     context = {
         'assignments': assignments,
-        'results': results,
+        'answers': answers_dict,  # key: assignment.id, value: Answer instance
     }
     return render(request, 'portal/student_dashboard.html', context)
+
 
 @login_required
 def dashboard_redirect(request):
@@ -161,18 +163,24 @@ def dashboard_redirect(request):
     else:
         return redirect('home')
     
+#Create assignment view
 @login_required
 @teacher_required
 def create_assignment(request):
     if request.method == 'POST':
-        form = AssignmentForm(request.POST, request.FILES)  # Note request.FILES for file uploads
+        form = AssignmentForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            assignment = form.save(commit=False)
+            # Set the teacher creating this assignment
+            assignment.created_by = request.user.teacher_profile
+            assignment.save()
+            form.save_m2m()
             return redirect('teacher_dashboard')
     else:
         form = AssignmentForm()
     return render(request, 'portal/create_assignment.html', {'form': form})
 
+#post result view
 @login_required
 @teacher_required
 def post_result(request):
@@ -187,6 +195,7 @@ def post_result(request):
 
 from .forms import TeacherRegistrationForm
 
+#teacher registration view
 def teacher_register(request):
     if request.method == 'POST':
         form = TeacherRegistrationForm(request.POST)
@@ -225,6 +234,8 @@ def create_timetable(request):
     return render(request, 'portal/create_timetable.html', {'form': form})
 
 from .forms import FinancialRecordUpdateForm
+
+
 @login_required
 def update_financial_record(request, record_id):
     try:
@@ -251,3 +262,49 @@ def finance_dashboard(request):
         'records': records,
     }
     return render(request, 'portal/finance_dashboard.html', context)
+
+
+from .models import Assignment, Answer
+from .forms import AnswerForm
+
+@login_required
+def submit_answer(request, assignment_id):
+    # Ensure the user is a student
+    if not hasattr(request.user, 'student_profile'):
+        return redirect('home')
+    
+    assignment = get_object_or_404(Assignment, id=assignment_id)
+    student = request.user.student_profile
+
+    # Check if an answer already exists for this assignment by the student
+    existing_answer = Answer.objects.filter(assignment=assignment, student=student).first()
+
+    if request.method == 'POST':
+        form = AnswerForm(request.POST, request.FILES, instance=existing_answer)
+        if form.is_valid():
+            answer = form.save(commit=False)
+            answer.assignment = assignment
+            answer.student = student
+            answer.save()
+            return redirect('student_dashboard')
+    else:
+        form = AnswerForm(instance=existing_answer)
+    
+    context = {
+        'form': form,
+        'assignment': assignment,
+    }
+    return render(request, 'portal/submit_answer.html', context)
+
+#view submition made ny students
+@login_required
+@teacher_required
+def view_submissions(request, assignment_id):
+    assignment = get_object_or_404(Assignment, id=assignment_id, created_by=request.user.teacher_profile)
+    # Get all answer submissions for this assignment
+    submissions = assignment.answers.all()  # assuming the Answer model's related_name is 'answers'
+    context = {
+        'assignment': assignment,
+        'submissions': submissions,
+    }
+    return render(request, 'portal/view_submissions.html', context)

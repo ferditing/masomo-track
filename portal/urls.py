@@ -25,10 +25,13 @@ urlpatterns = [
     
     # Teacher functions
     path('dashboard/teacher/create-assignment/', views.create_assignment, name='create_assignment'),
+    path('dashboard/teacher/view-submissions/<int:assignment_id>/', views.view_submissions, name='view_submissions'),
     
     # Headteacher functions
     path('dashboard/headteacher/create-timetable/', views.create_timetable, name='create_timetable'),
     
     # Finance functions
-    path('dashboard/finance/update-record/<int:record_id>/', views.update_financial_record, name='financial_record'),
+    path('dashboard/finance/update-record/<int:record_id>/', views.update_financial_record, name='update_financial_record'),
+    #student functions
+    path('dashboard/student/submit-answer/<int:assignment_id>/', views.submit_answer, name='submit_answer'),
 ]

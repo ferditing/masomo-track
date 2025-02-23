@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Submissions for {{ assignment.title }} - Masomo-Track</title>
+</head>
+<body>
+    <h1>Submissions for "{{ assignment.title }}"</h1>
+    {% if submissions %}
+        <table border="1" cellspacing="0" cellpadding="8">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Answer Text</th>
+                    <th>Uploaded File</th>
+                    <th>Submitted At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for submission in submissions %}
+                    <tr>
+                        <td>{{ submission.student.user.get_full_name }}</td>
+                        <td>{{ submission.answer_text|default:"N/A" }}</td>
+                        <td>
+                            {% if submission.file_upload %}
+                                <a href="{{ submission.file_upload.url }}" target="_blank">Download</a>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ submission.submitted_at }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No submissions yet for this assignment.</p>
+    {% endif %}
+    <p><a href="{% url 'teacher_dashboard' %}">Back to Teacher Dashboard</a></p>
+</body>
+</html>

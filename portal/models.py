@@ -11,6 +11,7 @@ class Subject(models.Model):
         blank=True,
         related_name='subjects_taught'
     )
+    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # NEW: Fee for the subject
 
     def __str__(self):
         return self.name
@@ -41,6 +42,10 @@ class Student(models.Model):
     bio = models.TextField(blank=True, null=True)
     parents = models.ManyToManyField('Parent', related_name='children', blank=True)
 
+    def calculate_total_fee(self):
+        # Sum the fee for each subject the student is taking
+        total_fee = sum(subject.fee for subject in self.subjects.all())
+        return total_fee
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.admission_number})"
 
@@ -79,6 +84,7 @@ class Assignment(models.Model):
        ('text', 'Text'),
        ('pdf', 'PDF'),
     ]
+    classroom = models.ForeignKey('ClassRoom', on_delete=models.SET_NULL, null=True, blank=True, related_name='assignments')
     subject = models.ForeignKey('Subject', on_delete=models.CASCADE, related_name='assignments')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)  # For text assignments
@@ -86,9 +92,18 @@ class Assignment(models.Model):
     posted_date = models.DateField(auto_now_add=True)
     assignment_type = models.CharField(max_length=10, choices=ASSIGNMENT_TYPE_CHOICES, default='text')
     file_upload = models.FileField(upload_to='assignments/', blank=True, null=True)  # For PDF uploads
+    # NEW: Record which teacher created this assignment
+    created_by = models.ForeignKey(
+        'Teacher', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='created_assignments'
+    )
 
     def __str__(self):
         return f"{self.title} ({self.get_assignment_type_display()})"
+
 # Model for recording results (marks/scores)
 class Result(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='results')
@@ -143,3 +158,23 @@ class FinancialRecord(models.Model):
 
     def __str__(self):
         return f"{self.student.user.get_full_name()} - {self.fee_status}"
+
+# portal/models.py
+
+class Answer(models.Model):
+    assignment = models.ForeignKey(
+        Assignment, 
+        on_delete=models.CASCADE, 
+        related_name='answers'
+    )
+    student = models.ForeignKey(
+        'Student', 
+        on_delete=models.CASCADE, 
+        related_name='answers'
+    )
+    answer_text = models.TextField(blank=True, null=True)
+    file_upload = models.FileField(upload_to='answers/', blank=True, null=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Answer by {self.student.user.get_full_name()} for {self.assignment.title}"

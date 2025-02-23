@@ -3,21 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <title>Teacher Dashboard - Masomo-Track</title>
+    <style>
+        .assignment {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .submission {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 8px;
+            background: #f9f9f9;
+        }
+    </style>
 </head>
 <body>
     <h1>Teacher Dashboard</h1>
     {% if assignments %}
-        <ul>
-            {% for assignment in assignments %}
-                <li>
-                    <strong>{{ assignment.title }}</strong> for <em>{{ assignment.subject.name }}</em><br>
-                    Due: {{ assignment.due_date }}<br>
-                    {{ assignment.description }}
-                </li>
-            {% endfor %}
-        </ul>
+        {% for assignment in assignments %}
+            <div class="assignment">
+                <h3>{{ assignment.title }}</h3>
+                <p><strong>Class:</strong> {{ assignment.classroom.name }}</p>
+                <p><strong>Subject:</strong> {{ assignment.subject.name }}</p>
+                <p><strong>Description:</strong> {{ assignment.description }}</p>
+                <p><strong>Due Date:</strong> {{ assignment.due_date }}</p>
+                {% if assignment.file_upload %}
+                    <p><a href="{{ assignment.file_upload.url }}" target="_blank">Download Assignment File</a></p>
+                {% endif %}
+                <h4>Submissions:</h4>
+                {% if assignment.answers.all %}
+                    <ul>
+                        {% for submission in assignment.answers.all %}
+                            <li class="submission">
+                                <strong>{{ submission.student.user.get_full_name }}</strong> submitted on {{ submission.submitted_at }}<br>
+                                <p><strong>Answer Text:</strong> {{ submission.answer_text|default:"No text provided" }}</p>
+                                {% if submission.file_upload %}
+                                    <p><a href="{{ submission.file_upload.url }}" target="_blank">Download Submission File</a></p>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No submissions for this assignment.</p>
+                {% endif %}
+                <!-- Only include the "View Submissions" link if desired; for class teachers we already list submissions. -->
+            </div>
+        {% endfor %}
     {% else %}
-        <p>No assignments found for your subjects.</p>
+        <p>You haven't created any assignments yet.</p>
     {% endif %}
+    <p><a href="{% url 'create_assignment' %}">Create a New Assignment</a></p>
+    <p><a href="{% url 'dashboard_redirect' %}">Back to Dashboard</a></p>
 </body>
 </html>

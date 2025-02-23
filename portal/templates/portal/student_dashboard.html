@@ -1,3 +1,4 @@
+{% load dict_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,30 +7,31 @@
 </head>
 <body>
     <h1>Student Dashboard</h1>
-    
     <h2>Assignments</h2>
     {% if assignments %}
         <ul>
             {% for assignment in assignments %}
                 <li>
-                    <strong>{{ assignment.title }}</strong> for <em>{{ assignment.subject.name }}</em><br>
-                    Due: {{ assignment.due_date }}
+                    <h3>{{ assignment.title }}</h3>
+                    <p><strong>Description:</strong> {{ assignment.description }}</p>
+                    <p><strong>Due Date:</strong> {{ assignment.due_date }}</p>
+                    {% if assignment.file_upload %}
+                        <p>
+                            <a href="{{ assignment.file_upload.url }}" target="_blank">Download Assignment File</a>
+                        </p>
+                    {% endif %}
+                    {% if answers|dictkey:assignment.id %}
+                        <p style="color:green;">You have submitted an answer.</p>
+                    {% else %}
+                        <p><a href="{% url 'submit_answer' assignment.id %}">Submit Your Answer</a></p>
+                    {% endif %}
                 </li>
+                <hr>
             {% endfor %}
         </ul>
     {% else %}
         <p>No assignments available.</p>
     {% endif %}
-    
-    <h2>Results</h2>
-    {% if results %}
-        <ul>
-            {% for result in results %}
-                <li>{{ result.subject.name }}: {{ result.score }} ({{ result.date_recorded }})</li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>No results available.</p>
-    {% endif %}
+    <p><a href="{% url 'dashboard_redirect' %}">Back to Dashboard</a></p>
 </body>
 </html>
